@@ -211,16 +211,27 @@ def find_and_save_curved_islands(output_image, output_dir):
 
 # Main execution
 def main():
-    image_path = 'cleaned_page_0.png'
-    output_dir = 'pixel_by_pixel_output'
-    auto_extract_dir = 'auto_extract'
+    # Get the root directory of the project
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    # Define the path to the data folder
+    data_folder = os.path.join(root_dir, 'data')
+
+    # Ensure the data folder exists
+    os.makedirs(data_folder, exist_ok=True)
+    print("data_folder:", data_folder)
+
+
+    # Define paths relative to the data folder
+    image_path = os.path.join(data_folder, 'cleaned_page_0.png')
+    output_dir = os.path.join(data_folder, 'pixel_by_pixel_output')
+    auto_extract_dir = os.path.join(data_folder, 'auto_extract')
     temp_islands_dir = os.path.join(auto_extract_dir, 'temp_islands')
     unique_dir = os.path.join(auto_extract_dir, 'unique')
     duplicate_dir = os.path.join(auto_extract_dir, 'duplicates')
 
-    # Create necessary directories
+    # Ensure all directories exist
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(auto_extract_dir, exist_ok=True)
     os.makedirs(temp_islands_dir, exist_ok=True)
     os.makedirs(unique_dir, exist_ok=True)
     os.makedirs(duplicate_dir, exist_ok=True)
