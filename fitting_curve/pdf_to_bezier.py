@@ -1,8 +1,41 @@
+import re
 import fitz  # PyMuPDF
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import json
+
+def remove_letters_and_numbers(pdf_path, output_path):
+    """
+    Detect and remove (via redaction) all words that contain letters (A-Z, a-z) or digits (0-9).
+    
+    Args:
+        pdf_path (str): Path to the input PDF file.
+        output_path (str): Path to save the redacted PDF file.
+    """
+    # Compile a pattern to match any letter or digit
+    pattern = re.compile(r'[A-Za-z0-9]')
+
+    doc = fitz.open(pdf_path)
+
+    for page in doc:
+        # Extract words: (x0, y0, x1, y1, "word", block_no, line_no, word_no)
+        words = page.get_text("words")
+
+        for w in words:
+            x0, y0, x1, y1, text = w[0], w[1], w[2], w[3], w[4]
+            # Check if the text contains letters or digits
+            if pattern.search(text):
+                rect = fitz.Rect(x0, y0, x1, y1)
+                page.add_redact_annot(rect)
+
+        # Apply all redactions on this page
+        page.apply_redactions()
+
+    doc.save(output_path)
+    doc.close()
+    print(f"[INFO] Letters and numbers removed from PDF. Saved: {output_path}")
+
 
 def plot_bezier_curve(start, control_points, end, n_points=100):
     """
@@ -32,6 +65,7 @@ def plot_bezier_curve(start, control_points, end, n_points=100):
     )
     return bezier_curve[:, 0], bezier_curve[:, 1]
 
+
 def ensure_directory_exists(directory_path):
     """
     Ensures that the specified directory exists. If not, creates it.
@@ -41,7 +75,8 @@ def ensure_directory_exists(directory_path):
     """
     if not os.path.exists(directory_path):
         os.makedirs(directory_path)
-        print(f"Created directory: {directory_path}")
+        print(f"[INFO] Created directory: {directory_path}")
+
 
 def extract_vector_data_pymupdf(pdf_path):
     """
@@ -106,7 +141,6 @@ def extract_vector_data_pymupdf(pdf_path):
                         })
                     elif op == "qu":  # Quadrilateral
                         quad = operands[0]  # Quad(Point(...), Point(...), Point(...), Point(...))
-                        # Access points via indexing
                         p1 = get_coordinates(quad[0])
                         p2 = get_coordinates(quad[1])
                         p3 = get_coordinates(quad[2])
@@ -130,9 +164,10 @@ def extract_vector_data_pymupdf(pdf_path):
                     else:
                         print("a rare op", op, "with operands", operands)
                 except Exception as e:
-                    print(f"Error processing operator '{op}' on page {page_number +1}: {e}")
+                    print(f"[WARN] Error processing operator '{op}' on page {page_number +1}: {e}")
 
     return vector_data
+
 
 def save_vector_data(vector_data, output_dir):
     """
@@ -152,19 +187,21 @@ def save_vector_data(vector_data, output_dir):
 
     with open(lines_filepath, 'w') as f:
         json.dump(lines, f, indent=4)
-    print(f"Saved lines data to {lines_filepath}")
+    print(f"[INFO] Saved lines data to {lines_filepath}")
 
     with open(cubic_curves_filepath, 'w') as f:
         json.dump(cubic_curves, f, indent=4)
-    print(f"Saved cubic curves data to {cubic_curves_filepath}")
+    print(f"[INFO] Saved cubic curves data to {cubic_curves_filepath}")
 
     with open(quadrilaterals_filepath, 'w') as f:
         json.dump(quadrilaterals, f, indent=4)
-    print(f"Saved quadrilaterals data to {quadrilaterals_filepath}")
+    print(f"[INFO] Saved quadrilaterals data to {quadrilaterals_filepath}")
+
 
 def plot_vector_data(vector_data, output_dir):
     """
-    Plots all vector data (lines, cubic curves, quadrilaterals) in a single plot and saves it as a PDF.
+    Plots all vector data (lines, cubic curves, quadrilaterals) in a single plot 
+    and saves it as a PDF.
     
     Args:
         vector_data (list): List of dictionaries containing vector data.
@@ -187,30 +224,33 @@ def plot_vector_data(vector_data, output_dir):
                 plt.plot(x, y, 'b-')
         elif item['type'] == 'cubic_curve':
             if item['control_points']:
-                x, y = plot_bezier_curve(
+                x_vals, y_vals = plot_bezier_curve(
                     item['start_point'],
                     item['control_points'],
                     item['end_point']
                 )
                 label = f"Cubic Curve (Page {item['page']})"
                 if label not in label_set:
-                    plt.plot(x, y, 'r-', label=label)
+                    plt.plot(x_vals, y_vals, 'r-', label=label)
                     label_set.add(label)
                 else:
-                    plt.plot(x, y, 'r-')
+                    plt.plot(x_vals, y_vals, 'r-')
         elif item['type'] == 'quadrilateral':
             x = item['position'][0]
             y = item['position'][1]
             width = item['width']
             height = item['height']
-            quad = plt.Rectangle((x, y), width, height, linewidth=1, edgecolor='green', facecolor='none', label=f"Quadrilateral (Page {item['page']})")
+            quad = plt.Rectangle(
+                (x, y), width, height, linewidth=1, edgecolor='green', 
+                facecolor='none', label=f"Quadrilateral (Page {item['page']})"
+            )
             if f"Quadrilateral (Page {item['page']})" not in label_set:
                 plt.gca().add_patch(quad)
                 label_set.add(f"Quadrilateral (Page {item['page']})")
             else:
                 plt.gca().add_patch(quad)
         else:
-            # Handle additional vector types if any
+            # Handle additional vector types if needed
             pass
 
     plt.xlabel("X Coordinate")
@@ -230,13 +270,13 @@ def plot_vector_data(vector_data, output_dir):
     # Adjust layout to prevent clipping of labels
     plt.tight_layout()
 
-    # Save the plot as PDF before showing it
+    # Save the plot as PDF
     plot_pdf_path = os.path.join(output_dir, 'vector_data.pdf')
     try:
         plt.savefig(plot_pdf_path, format='pdf', bbox_inches='tight')
-        print(f"Saved collective plot as PDF: {plot_pdf_path}")
+        print(f"[INFO] Saved collective plot as PDF: {plot_pdf_path}")
     except Exception as e:
-        print(f"Failed to save plot as PDF: {e}")
+        print(f"[ERROR] Failed to save plot as PDF: {e}")
 
     # Display the plot interactively
     plt.show()
@@ -244,38 +284,43 @@ def plot_vector_data(vector_data, output_dir):
     # Close the plot to free memory
     plt.close()
 
-# Example usage
-if __name__ == "__main__":
-    pdf_path = 'NEW CATHAY.pdf'  # Replace with your PDF file path
-    output_directory = os.path.join('..', 'data')  # Output directory for JSON files and PDF plot
 
-    # Ensure the output directory exists
+# Main logic
+if __name__ == "__main__":
+    # Specify your input PDF
+    pdf_path = 'NEW CATHAY.pdf'  # Replace with your actual PDF path
+
+    # Directory to store JSON outputs and the final plot
+    output_directory = os.path.join('..', 'data')
     ensure_directory_exists(output_directory)
 
-    # Extract vector data from PDF
+    # Step 1: Remove letters and numbers from the original PDF
+    redacted_pdf_path = os.path.join(output_directory, 'redacted.pdf')
+    remove_letters_and_numbers(pdf_path, redacted_pdf_path)
+
+    # Step 2: Extract vector data from the redacted PDF
     try:
-        data = extract_vector_data_pymupdf(pdf_path)
+        data = extract_vector_data_pymupdf(redacted_pdf_path)
     except Exception as e:
-        print(f"An error occurred while extracting vector data: {e}")
+        print(f"[ERROR] An error occurred while extracting vector data: {e}")
         data = []
 
+    # Step 3: If we have vector data, save it and plot it
     if data:
-        # Save lines, cubic curves, and quadrilaterals into separate JSON files
         try:
             save_vector_data(data, output_directory)
         except Exception as e:
-            print(f"An error occurred while saving vector data: {e}")
+            print(f"[ERROR] An error occurred while saving vector data: {e}")
 
-        # Plot all vector data and save as PDF
         try:
             plot_vector_data(data, output_directory)
         except Exception as e:
-            print(f"An error occurred while plotting vector data: {e}")
+            print(f"[ERROR] An error occurred while plotting vector data: {e}")
 
-        # Optionally, print curve and quadrilateral data with control points
+        # Optionally, you can print out details about curves/quadrilaterals:
         for idx, item in enumerate(data, start=1):
             if item["type"] == "cubic_curve":
-                print(f"{item['type'].capitalize()} {idx}:")
+                print(f"Cubic Curve {idx}:")
                 print(f"  Page {item['page']}:")
                 print(f"    Start Point: {item['start_point']}")
                 print(f"    Control Points: {item['control_points']}")
@@ -287,4 +332,4 @@ if __name__ == "__main__":
                 print(f"    Width: {item['width']}")
                 print(f"    Height: {item['height']}\n")
     else:
-        print("No vector data found.")
+        print("[INFO] No vector data found.")
