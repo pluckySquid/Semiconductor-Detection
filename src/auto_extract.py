@@ -224,6 +224,7 @@ def main():
 
     # Define paths relative to the data folder
     image_path = os.path.join(data_folder, 'cleaned_page_0.png')
+    image_path = os.path.join(data_folder, '../data/test.png')
     output_dir = os.path.join(data_folder, 'pixel_by_pixel_output')
     auto_extract_dir = os.path.join(data_folder, 'auto_extract')
     temp_islands_dir = os.path.join(auto_extract_dir, 'temp_islands')

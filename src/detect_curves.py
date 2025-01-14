@@ -7,14 +7,15 @@ from skimage.metrics import structural_similarity as ssim
 import matplotlib.pyplot as plt
 
 # Parameters
-IMAGE_PATH = './cleaned_page_0.png'
+IMAGE_PATH = '../data/cleaned_page_0.png'
 # Update the TEMPLATES_DIR to point to the unique templates
-TEMPLATES_DIR = './auto_extract/unique/'
-OUTPUT_IMAGE_PATH = './detected_curves.png'
+TEMPLATES_DIR = '../data/auto_extract/unique/'
+TEMPLATES_DIR = '../data/test/components_valid_boxes/'
+OUTPUT_IMAGE_PATH = '../data/detected_curves.png'
 CROPPED_X1, CROPPED_Y1 = 1000, 1000  # Adjust as needed
 CROPPED_X2, CROPPED_Y2 = 8000, 5000
 DPI = 100
-THRESHOLD = 0.7  # Similarity threshold for template matching
+THRESHOLD = 0.75  # Similarity threshold for template matching
 NMS_THRESHOLD = 0.5  # IoU threshold for Non-Maximum Suppression
 ROTATION_ANGLES = [0, 90, 180, 270]  # Degrees to rotate templates
 
